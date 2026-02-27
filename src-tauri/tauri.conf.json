@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tauri-app",
+  "productName": "Renamer",
   "version": "0.1.0",
-  "identifier": "com.tauri-app.app",
+  "identifier": "com.renamer.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -15,7 +15,7 @@
       {
         "label": "main",
         "visible": false,
-        "title": "tauri-app",
+        "title": "Renamer",
         "width": 800,
         "height": 600,
         "minWidth": 720,
@@ -25,6 +25,7 @@
       {
         "label": "splashscreen",
         "url": "/splashscreen.html",
+        "title": "Renamer",
         "width": 560,
         "height": 400,
         "center": true,
