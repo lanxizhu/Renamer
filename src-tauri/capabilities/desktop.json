@@ -10,6 +10,16 @@
   ],
   "permissions": [
     "window-state:default",
-    "global-shortcut:default"
+    "global-shortcut:default",
+    "dialog:default",
+    "fs:default",
+    {
+      "identifier": "fs:allow-rename",
+      "allow": [{ "path": "$HOME/*" }]
+    },
+    {
+      "identifier": "fs:allow-rename",
+      "allow": [{ "path": "$HOME/**/*" }]
+    }
   ]
 }
