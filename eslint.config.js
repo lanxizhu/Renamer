@@ -1,22 +1,19 @@
-import js from "@eslint/js";
-import reactHooks from "eslint-plugin-react-hooks";
-import reactRefresh from "eslint-plugin-react-refresh";
-import { defineConfig } from "eslint/config";
-import globals from "globals";
-import tseslint from "typescript-eslint";
+// eslint.config.mjs
+import antfu from "@antfu/eslint-config"
 
-export default defineConfig([
+export default antfu(
   {
-    files: ["**/*.{ts,tsx}"],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
-    ],
-    languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
+    react: true,
+    stylistic: {
+      indent: 2, // 4, or 'tab'
+      quotes: "double", // or 'single'|'double'
+    },
+    // TypeScript and Vue are autodetected, you can also explicitly enable them:
+    typescript: true,
+  },
+  {
+    rules: {
+      "react-refresh/only-export-components": "off",
     },
   },
-]);
+)

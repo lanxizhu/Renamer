@@ -1,14 +1,16 @@
 {
   "name": "Renamer",
-  "private": true,
-  "version": "0.1.0",
   "type": "module",
+  "version": "0.1.0",
+  "private": true,
   "description": "📋 Batch Rename Files",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",
@@ -28,6 +30,8 @@
     "tailwindcss": "^4.2.1"
   },
   "devDependencies": {
+    "@antfu/eslint-config": "^7.6.1",
+    "@eslint-react/eslint-plugin": "^2.13.0",
     "@eslint/js": "^10.0.1",
     "@tauri-apps/cli": "^2.10.0",
     "@types/node": "^25.3.2",
