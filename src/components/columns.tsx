@@ -1,8 +1,9 @@
 import type { ColumnDef } from "@tanstack/react-table"
+import type { DirEntry } from "@tauri-apps/plugin-fs"
+
 import type { ComponentType, SVGProps } from "react"
 
-import { BadgeCheck, BadgeMinus, BadgeQuestionMark, BadgeX, Clock, MoreHorizontal } from "lucide-react"
-
+import { BadgeCheck, BadgeMinus, BadgeQuestionMark, BadgeX, ChevronDown, ChevronRight, Clock, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -66,9 +67,56 @@ export interface Payment {
   status: StatusValue
   email: string
   match: boolean
+  children?: Payment[]
+}
+
+export interface FileEntry extends DirEntry {
+  id: string
+  parent: string
+  full: string
+  status: StatusValue
+  children?: FileEntry[]
 }
 
 export const columns: ColumnDef<Payment>[] = [
+  {
+    header: " ",
+    cell: ({ row }) => {
+      return row.getCanExpand()
+        ? (
+            <Button
+              variant="ghost"
+              onClick={row.getToggleExpandedHandler()}
+            >
+              {row.getIsExpanded() ? <ChevronDown /> : <ChevronRight />}
+            </Button>
+          )
+        : ""
+    },
+  },
+  {
+    id: "id",
+    accessorKey: "id",
+    header: "ID",
+    cell: ({ row }) => {
+      return <span>{row.getValue("id")}</span>
+    },
+  },
+  {
+    id: "name",
+    accessorKey: "name",
+    header: "Name",
+    cell: ({ row }) => {
+      return (
+        <div className="flex flex-col">
+          <span>{row.getValue("email")}</span>
+          <span className="text-sm text-muted-foreground">
+            {row.getValue("name")}
+          </span>
+        </div>
+      )
+    },
+  },
   {
     id: "select",
     header: ({ table }) => (

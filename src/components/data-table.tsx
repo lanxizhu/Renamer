@@ -7,11 +7,12 @@ import type {
 import {
   flexRender,
   getCoreRowModel,
+  getExpandedRowModel,
   getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { useState } from "react"
+import { Fragment, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -34,11 +35,13 @@ import { DataTablePagination } from "./data-table-pagination"
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  children: React.ReactNode
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  children,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
@@ -48,10 +51,14 @@ export function DataTable<TData, TValue>({
     = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
 
+  const [expanded, setExpanded] = useState({})
+
   const table = useReactTable({
     data,
     columns,
     manualPagination: true,
+    getSubRows: row => row.children,
+    getRowCanExpand: row => true,
     getCoreRowModel: getCoreRowModel(),
     // getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -61,8 +68,11 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    getExpandedRowModel: getExpandedRowModel(),
+    onExpandedChange: setExpanded,
 
     state: {
+      expanded,
       sorting,
       columnFilters,
       columnVisibility,
@@ -71,15 +81,17 @@ export function DataTable<TData, TValue>({
   })
 
   return (
-    <div>
-      <div className="flex items-center py-4">
+    <div className="space-y-4 h-full flex flex-col">
+      <div className="flex items-center gap-2 py-4">
         <Input
-          placeholder="Filter emails..."
+          placeholder="Filter names..."
           value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
           onChange={event =>
             table.getColumn("email")?.setFilterValue(event.target.value)}
-          className="max-w-sm"
+          className="max-w-xs"
         />
+
+        {children && <>{children}</>}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -109,8 +121,8 @@ export function DataTable<TData, TValue>({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="w-full">
-        <div className="[&>div]:max-h-70 [&>div]:rounded-sm [&>div]:border">
+      <div className="w-full ">
+        <div>
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map(headerGroup => (
@@ -134,21 +146,34 @@ export function DataTable<TData, TValue>({
               {table.getRowModel().rows?.length
                 ? (
                     table.getRowModel().rows.map(row => (
-                      <TableRow
-                        key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
-                      >
-                        {row.getVisibleCells().map(cell => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
+
+                      <Fragment key={row.id}>
+                        <TableRow
+                          data-state={row.getIsSelected() && "selected"}
+                        >
+                          {row.getVisibleCells().map(cell => (
+                            <TableCell key={cell.id}>
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                        {row.getIsExpanded() && (
+                          <Fragment>
+                            <TableRow className="bg-muted">
+                              {row.subRows.map(cell => (
+                                <TableCell key={cell.id}>
+                                  {/* {flexRender(cell.column.columnDef.cell, cell.getContext())} */}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </Fragment>
+                        )}
+                      </Fragment>
                     ))
                   )
                 : (
                     <TableRow>
-                      <TableCell colSpan={columns.length} className="h-24 text-center">
+                      <TableCell colSpan={columns.length} className="h-48 text-center">
                         No results.
                       </TableCell>
                     </TableRow>
@@ -158,7 +183,9 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      <DataTablePagination table={table} />
+      {data.length > 0 && (
+        <DataTablePagination table={table} />
+      )}
     </div>
   )
 }
