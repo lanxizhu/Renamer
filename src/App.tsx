@@ -41,23 +41,35 @@ function DemoPage() {
   )
 }
 
-function App() {
-  const [message, setMessage] = useState<string>("")
+async function asyncPool(limit: number, tasks: Promise<void>[]) {
+  const results = [] // 存储所有任务的结果
+  const executing = new Set() // 存储当前正在执行的任务
 
-  const [status, setStatus] = useState<{ type: "success" | "error", message: string } | null>(null)
+  for (const task of tasks) {
+    // 将 task 包装成 Promise 并开始执行
+    const p = Promise.resolve().then(() => typeof task === "function" && task())
+    results.push(p)
+    executing.add(p)
 
-  async function greet() {
-    console.log("Invoking Rust function with message:", message)
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    const res = await invoke("greet", {
-      name: message,
-    })
+    // 任务执行完成后，从正在执行的集合中移除
+    const clean = () => executing.delete(p)
+    p.then(clean).catch(clean)
 
-    openFileDialog()
-    setStatus({ type: "success", message: `Received response from Rust function: ${res}` })
+    // 如果当前执行中的任务数达到了限制，就等待其中任何一个完成
+    if (executing.size >= limit) {
+      await Promise.race(executing)
+    }
   }
 
+  return Promise.all(results)
+}
+
+function App() {
+  const [status, setStatus] = useState<{ type: "success" | "error", message: string } | null>(null)
+
   const [files, setFiles] = useState<FileEntry[]>([])
+
+  const [fileSetState, setFileSetState] = useState<Set<string>>(() => new Set())
 
   // const selectedFiles = Array.from(event.target.files || []).map(file => file.name)
   // setFiles(selectedFiles)
@@ -101,11 +113,35 @@ function App() {
       })
     }
 
-    if (isTree) {
+    if (!isTree) {
       return flatEntries(entries).filter(entry => entry.isFile)
     }
 
     return entries
+  }
+
+  const handleDir = async (path: string) => {
+    try {
+      const entries = await readTreeDir(path)
+
+      setFiles((prevFiles) => {
+        setFileSetState((prevSet) => {
+          const newSet = new Set(prevSet)
+
+          entries.forEach(entry => newSet.add(entry.full))
+          // Return the new state for fileSetState
+          return newSet
+        })
+
+        // Filter and add only unique entries
+        const uniqueEntries = entries.filter(entry => !fileSetState.has(entry.full))
+
+        return [...prevFiles, ...uniqueEntries]
+      })
+    }
+    catch (error) {
+      console.error("Error reading directory tree:", error)
+    }
   }
 
   async function openFileDialog(directory = false) {
@@ -133,15 +169,8 @@ function App() {
           })
         }
         else {
-          console.log("Selected directory:", selected[0])
-
-          readTreeDir(selected[0], true).then((entries) => {
-            console.log("Directory tree:", entries)
-
-            setFiles([...files, ...entries])
-          }).catch((err) => {
-            console.error("Error reading directory tree:", err)
-          })
+          // const tasks = selected.map(path => handleDir(path))
+          asyncPool(1, selected.map(path => handleDir(path)))
         }
       }
       else if (selected) {
@@ -168,13 +197,6 @@ function App() {
               批量重命名工具
             </h3>
           </div>
-          {/* <div className="flex gap-4" id="greet-form">
-          <Button variant="outline" onClick={() => openFileDialog()}>Select File</Button>
-          <Button variant="outline" onClick={() => openFileDialog(true)}>Select Directory</Button>
-          <Button variant="outline" size="icon" aria-label="Submit">
-            <ArrowUpIcon />
-          </Button>
-        </div> */}
 
           <Alert className="">
             <InfoIcon />

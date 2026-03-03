@@ -16,7 +16,15 @@
     },
     {
       "identifier": "fs:allow-read-dir",
-      "allow": [{ "path": "$HOME/" }]
+      "allow": [{ "path": "$HOME/**/*" }]
+    },
+    {
+      "identifier": "fs:allow-lstat",
+      "allow": [{ "path": "$HOME/**/*" }]
+    },
+    {
+      "identifier": "fs:allow-read",
+      "allow": [{ "path": "$HOME/**/*" }]
     }
   ]
 }
