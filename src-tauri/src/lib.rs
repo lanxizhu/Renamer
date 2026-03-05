@@ -1,5 +1,5 @@
 mod global_shortcut;
-mod menu;
+// mod menu;
 mod single_instance;
 mod splash_screen;
 mod theme;
@@ -32,7 +32,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            menu::init(app).unwrap();
+            // menu::init(app).unwrap();
             tray::init(app).unwrap();
             // splash_screen::init(app).unwrap();
             global_shortcut::init(app).unwrap();
