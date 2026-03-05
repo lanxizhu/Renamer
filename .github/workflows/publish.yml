@@ -35,10 +35,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: setup node
-        uses: pnpm/setup-node@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
-          version: 10
           node-version: lts/*
           cache: true # Set this to npm, yarn or pnpm.
 
