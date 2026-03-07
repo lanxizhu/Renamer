@@ -14,33 +14,6 @@ import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import "./App.css"
 
-export const payments: Payment[] = Array.from({ length: 15 }, (_, i) => ({
-  id: "489e1d42",
-  amount: 125,
-  match: [true, false][Math.floor(Math.random() * 2)],
-  status: ["pending", "processing", "success", "failed", "not started", "unknown"][Math.floor(Math.random() * 6)] as StatusValue,
-  email: "example@gmail.com",
-  children: i % 3 === 0
-    ? [
-        {
-          id: "child-1",
-          amount: 50,
-          match: true,
-          status: "success",
-          email: "",
-        },
-      ]
-    : undefined,
-}))
-
-function DemoPage() {
-  return (
-    <div className="container mx-auto py-10">
-      <DataTable columns={columns} data={payments} />
-    </div>
-  )
-}
-
 async function asyncPool(limit: number, tasks: Promise<void>[]) {
   const results = [] // 存储所有任务的结果
   const executing = new Set() // 存储当前正在执行的任务
@@ -64,15 +37,14 @@ async function asyncPool(limit: number, tasks: Promise<void>[]) {
   return Promise.all(results)
 }
 
+const NameRegex = /[^\\/]+$/
+
 function App() {
   const [status, setStatus] = useState<{ type: "success" | "error", message: string } | null>(null)
 
   const [files, setFiles] = useState<FileEntry[]>([])
 
   const [fileSetState, setFileSetState] = useState<Set<string>>(() => new Set())
-
-  // const selectedFiles = Array.from(event.target.files || []).map(file => file.name)
-  // setFiles(selectedFiles)
 
   const readTreeDir = async (path: string, isTree?: boolean): Promise<FileEntry[]> => {
     const entries: FileEntry[] = []
@@ -144,6 +116,43 @@ function App() {
     }
   }
 
+  const handleFile = async (path: string) => {
+    try {
+      const entry = await lstat(path)
+
+      const name = path.match(NameRegex)
+      const parent = path.replace(/[\\/][^\\/]+$/, "")
+
+      setFiles((prevFiles) => {
+        setFileSetState((prevSet) => {
+          const newSet = new Set(prevSet)
+          newSet.add(path)
+          // Return the new state for fileSetState
+          return newSet
+        })
+
+        // Check if the file is already in the list
+        if (fileSetState.has(path)) {
+          return prevFiles
+        }
+
+        return [...prevFiles, {
+          id: crypto.randomUUID(),
+          name: name ? name[0] : "",
+          status: "not started",
+          full: path,
+          parent,
+          isDirectory: entry.isDirectory,
+          isFile: entry.isFile,
+          isSymlink: entry.isSymlink,
+        }]
+      })
+    }
+    catch (error) {
+      console.error("Error reading file entry:", error)
+    }
+  }
+
   async function openFileDialog(directory = false) {
     try {
       const selected = await open({
@@ -152,21 +161,9 @@ function App() {
       })
 
       if (Array.isArray(selected)) {
-        console.log("Selected files:", selected)
-
+        // console.log("Selected files:", selected)
         if (!directory) {
-          // setFiles(selected)
-
-          lstat(selected[0]).then((entry) => {
-            console.log("File entry:", entry)
-
-            // setFiles([{
-            //   id: crypto.randomUUID(),
-            //   name: entry.name,
-            // }])
-          }).catch((err) => {
-            console.error("Error reading file entry:", err)
-          })
+          asyncPool(1, selected.map(path => handleFile(path)))
         }
         else {
           // const tasks = selected.map(path => handleDir(path))
