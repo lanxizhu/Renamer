@@ -12,30 +12,31 @@
     "fs:default",
     {
       "identifier": "fs:allow-rename",
-      "allow": [{ "path": "$HOME/**/*" }]
+      "allow": [{ "path": "$HOME/**/*" }, { "path": "$DESKTOP/**/*" }]
     },
     {
       "identifier": "fs:allow-read-dir",
-      "allow": [{ "path": "$HOME/**/*" }]
+      "allow": [{ "path": "$HOME/**/*" }, { "path": "$DESKTOP/**/*" }]
     },
     {
       "identifier": "fs:allow-lstat",
-      "allow": [{ "path": "$HOME/**/*" }]
+      "allow": [{ "path": "$HOME/**/*" }, { "path": "$DESKTOP/**/*" }]
     },
     {
       "identifier": "fs:allow-read",
-      "allow": [{ "path": "$HOME/**/*" }]
+      "allow": [{ "path": "$HOME/**/*" }, { "path": "$DESKTOP/**/*" }]
     },
     {
       "identifier": "fs:allow-open",
-      "allow": [{ "path": "$HOME/**/*" }]
+      "allow": [{ "path": "$HOME/**/*" }, { "path": "$DESKTOP/**/*" }]
     },
     {
       "identifier": "opener:allow-open-path",
       "allow": [
         {
           "path": "$HOME/**/*"
-        }
+        },
+        { "path": "$DESKTOP/**/*" }
       ]
     },
     {
@@ -43,7 +44,8 @@
       "allow": [
         {
           "path": "$HOME/**/*"
-        }
+        },
+        { "path": "$DESKTOP/**/*" }
       ]
     }
   ]
