@@ -85,7 +85,7 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-4 h-full flex flex-col">
       <div className="flex items-center gap-2 py-4">
-        <InputGroup className="max-w-xs">
+        <InputGroup className="max-w-xs bg-background dark:bg-input/30">
           <InputGroupInput
             placeholder="按名称筛选文件"
             value={(table.getColumn("target")?.getFilterValue() as string) ?? ""}
@@ -157,7 +157,7 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))}
             </TableHeader>
-            <TableBody>
+            <TableBody className="bg-background dark:bg-input/30">
               {table.getRowModel().rows?.length
                 ? (
                     table.getRowModel().rows.map(row => (
