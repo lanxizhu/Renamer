@@ -1,9 +1,10 @@
 import type { DirEntry } from "@tauri-apps/plugin-fs"
-import type { FileEntry, Payment, StatusValue } from "@/components/columns"
+import type { FileEntry, StatusValue } from "@/components/columns"
 import { invoke } from "@tauri-apps/api/core"
 import { open } from "@tauri-apps/plugin-dialog"
-import { lstat, readDir } from "@tauri-apps/plugin-fs"
-import { ArrowUpIcon, BadgeCheck, BadgeMinus, BadgeQuestionMark, BadgeX, CheckCircle2Icon, Clock, InfoIcon } from "lucide-react"
+import { copyFile, lstat, readDir, rename } from "@tauri-apps/plugin-fs"
+import { ArrowUpIcon, BadgeCheck, BadgeMinus, BadgeQuestionMark, BadgeX, BookmarkIcon, CheckCircle2Icon, Clock, InfoIcon, Play } from "lucide-react"
+import { Label } from "radix-ui"
 import { Fragment, useState } from "react"
 import { columns } from "@/components/columns"
 import { DataTable } from "@/components/data-table"
@@ -12,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
-import "./App.css"
+import "./App"
 
 async function asyncPool(limit: number, tasks: Promise<void>[]) {
   const results = [] // 存储所有任务的结果
@@ -39,6 +40,8 @@ async function asyncPool(limit: number, tasks: Promise<void>[]) {
 
 const NameRegex = /[^\\/]+$/
 
+const TargetRegex = /_([\u4E00-\u9FA5]+)_.*\.(\w+)$/
+
 function App() {
   const [status, setStatus] = useState<{ type: "success" | "error", message: string } | null>(null)
 
@@ -54,14 +57,20 @@ function App() {
     for (const entry of dirEntires) {
       const id = crypto.randomUUID()
 
+      const targetMatch = entry.name.match(TargetRegex)
+      const target = targetMatch ? `${targetMatch[1]}.${targetMatch[2]}` : entry.name
+      const match = !!targetMatch
+
       if (entry.isDirectory) {
         const children = await readTreeDir(`${path}/${entry.name}`, true)
         entries.push({
           id,
           ...entry,
           parent: path,
-          status: "not started",
+          status: match ? "not started" : "unknown",
           full: `${path}/${entry.name}`,
+          target,
+          match,
           children,
         })
       }
@@ -70,8 +79,10 @@ function App() {
           id,
           ...entry,
           parent: path,
-          status: "not started",
+          status: match ? "not started" : "unknown",
           full: `${path}/${entry.name}`,
+          target,
+          match,
         })
       }
     }
@@ -123,6 +134,10 @@ function App() {
       const name = path.match(NameRegex)
       const parent = path.replace(/[\\/][^\\/]+$/, "")
 
+      const targetMatch = path.match(TargetRegex)
+      const target = targetMatch ? `${targetMatch[1]}.${targetMatch[2]}` : name ? name[0] : ""
+      const match = !!targetMatch
+
       setFiles((prevFiles) => {
         setFileSetState((prevSet) => {
           const newSet = new Set(prevSet)
@@ -145,6 +160,8 @@ function App() {
           isDirectory: entry.isDirectory,
           isFile: entry.isFile,
           isSymlink: entry.isSymlink,
+          target,
+          match,
         }]
       })
     }
@@ -182,6 +199,22 @@ function App() {
     }
   }
 
+  const [loading, setLoading] = useState(false)
+
+  const renameFile = async (file: FileEntry) => {
+    if (file.match) {
+      const res = await rename(file.full, `${file.parent}/${file.target}`)
+    }
+  }
+
+  const handleRename = async () => {
+    setLoading(true)
+
+    await asyncPool(1, files.map(file => renameFile(file)))
+
+    setLoading(false)
+  }
+
   return (
     <>
       <div className="flex flex-col gap-2" style={{ height: "calc(100vh - 2rem)" }}>
@@ -209,8 +242,23 @@ function App() {
             children={(
               <Fragment>
                 <div className="flex gap-2" id="greet-form">
-                  <Button variant="outline" onClick={() => openFileDialog()}>Select File</Button>
-                  <Button variant="outline" onClick={() => openFileDialog(true)}>Select Directory</Button>
+                  <Button variant="outline" disabled={loading} onClick={() => openFileDialog()}>选择文件</Button>
+                  <Button variant="outline" disabled={loading} onClick={() => openFileDialog(true)}>选择文件夹</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setFiles([])
+                      setFileSetState(new Set())
+                    }}
+                    disabled={loading}
+                  >
+                    清除选择
+                  </Button>
+
+                  <Button disabled={loading || !files.length} onClick={() => handleRename()}>
+                    {!loading ? (<Play size={16} />) : (<Spinner />)}
+                    开始
+                  </Button>
                 </div>
               </Fragment>
             )}

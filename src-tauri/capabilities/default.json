@@ -25,6 +25,26 @@
     {
       "identifier": "fs:allow-read",
       "allow": [{ "path": "$HOME/**/*" }]
+    },
+    {
+      "identifier": "fs:allow-open",
+      "allow": [{ "path": "$HOME/**/*" }]
+    },
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "$HOME/**/*"
+        }
+      ]
+    },
+    {
+      "identifier": "fs:allow-copy-file",
+      "allow": [
+        {
+          "path": "$HOME/**/*"
+        }
+      ]
     }
   ]
 }
