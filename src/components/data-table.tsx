@@ -12,8 +12,9 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { Fragment, useState } from "react"
+import { X } from "lucide-react"
 
+import { Fragment, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -31,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { DataTablePagination } from "./data-table-pagination"
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "./ui/input-group"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -58,7 +60,7 @@ export function DataTable<TData, TValue>({
     columns,
     manualPagination: true,
     getSubRows: row => row.children,
-    getRowCanExpand: row => true,
+    getRowCanExpand: row => row.children?.length,
     getCoreRowModel: getCoreRowModel(),
     // getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -83,19 +85,32 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-4 h-full flex flex-col">
       <div className="flex items-center gap-2 py-4">
-        <Input
-          placeholder="Filter names..."
-          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
-          onChange={event =>
-            table.getColumn("email")?.setFilterValue(event.target.value)}
-          className="max-w-xs"
-        />
+        <InputGroup className="max-w-xs">
+          <InputGroupInput
+            placeholder="按名称筛选文件"
+            value={(table.getColumn("target")?.getFilterValue() as string) ?? ""}
+            onChange={event =>
+              table.getColumn("target")?.setFilterValue(event.target.value)}
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              aria-label="Copy"
+              title="Copy"
+              size="icon-xs"
+              onClick={() => {
+                table.getColumn("target")?.setFilterValue("")
+              }}
+            >
+              <X />
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
 
         {children && <>{children}</>}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
+            <Button variant="outline" className="ml-auto hidden">
               Columns
             </Button>
           </DropdownMenuTrigger>
@@ -174,7 +189,7 @@ export function DataTable<TData, TValue>({
                 : (
                     <TableRow>
                       <TableCell colSpan={columns.length} className="h-48 text-center">
-                        No results.
+                        暂无数据
                       </TableCell>
                     </TableRow>
                   )}

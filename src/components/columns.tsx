@@ -3,7 +3,9 @@ import type { DirEntry } from "@tauri-apps/plugin-fs"
 
 import type { ComponentType, SVGProps } from "react"
 
-import { BadgeCheck, BadgeMinus, BadgeQuestionMark, BadgeX, ChevronDown, ChevronRight, Clock, MoreHorizontal } from "lucide-react"
+import { open } from "@tauri-apps/plugin-dialog"
+import { openPath } from "@tauri-apps/plugin-opener"
+import { BadgeCheck, BadgeMinus, BadgeQuestionMark, BadgeX, BookmarkIcon, ChevronDown, ChevronRight, Clock, MoreHorizontal, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -29,45 +31,34 @@ interface StatusConfig {
 const STATUS_CONFIG: Record<StatusValue, StatusConfig> = {
   "success": {
     icon: BadgeCheck,
-    text: "Success",
+    text: "成功",
     color: "green",
   },
   "processing": {
     icon: Spinner,
-    text: "In progress",
+    text: "进行中",
     color: "blue",
   },
   "pending": {
     icon: Clock,
-    text: "Pending",
+    text: "待处理",
     color: "amber",
   },
   "failed": {
     icon: BadgeX,
-    text: "Failed",
+    text: "失败",
     color: "red",
   },
   "not started": {
     icon: BadgeMinus,
-    text: "Not started",
+    text: "未开始",
     color: "gray",
   },
   "unknown": {
     icon: BadgeQuestionMark,
-    text: "Unknown",
+    text: "未知",
     color: "slate",
   },
-}
-
-// This type is used to define the shape of our data.
-// You can use a Zod schema here if you want.
-export interface Payment {
-  id: string
-  amount: number
-  status: StatusValue
-  email: string
-  match: boolean
-  children?: Payment[]
 }
 
 export interface FileEntry extends DirEntry {
@@ -75,10 +66,13 @@ export interface FileEntry extends DirEntry {
   parent: string
   full: string
   status: StatusValue
+  target: string
+  match: boolean
+  target_full?: string
   children?: FileEntry[]
 }
 
-export const columns: ColumnDef<Payment>[] = [
+export const columns: ColumnDef<FileEntry>[] = [
   {
     header: " ",
     cell: ({ row }) => {
@@ -92,29 +86,6 @@ export const columns: ColumnDef<Payment>[] = [
             </Button>
           )
         : ""
-    },
-  },
-  {
-    id: "id",
-    accessorKey: "id",
-    header: "ID",
-    cell: ({ row }) => {
-      return <span>{row.getValue("id")}</span>
-    },
-  },
-  {
-    id: "name",
-    accessorKey: "name",
-    header: "Name",
-    cell: ({ row }) => {
-      return (
-        <div className="flex flex-col">
-          <span>{row.getValue("email")}</span>
-          <span className="text-sm text-muted-foreground">
-            {row.getValue("name")}
-          </span>
-        </div>
-      )
     },
   },
   {
@@ -148,14 +119,60 @@ export const columns: ColumnDef<Payment>[] = [
             ))
     },
   },
+  // {
+  //   id: "id",
+  //   accessorKey: "id",
+  //   header: "ID",
+  //   cell: ({ row }) => {
+  //     return <span>{row.getValue("id")}</span>
+  //   },
+  // },
+  {
+    id: "target",
+    accessorKey: "target",
+    header: "文件名称",
+    cell: ({ row }) => {
+      const match = row.original?.match
+      return (
+        <div className="flex flex-col">
+          <span className="text-sm">
+            {match ? row.getValue("target") : ""}
+          </span>
+
+          <span className={`text-sm ${match ? "text-muted-foreground line-through" : ""}`}>
+            {row.getValue("name")}
+          </span>
+        </div>
+      )
+    },
+  },
+  {
+    id: "name",
+    accessorKey: "name",
+    header: "",
+    cell: ({ row }) => {
+      return (
+        <div className="flex flex-col hidden">
+          <span className="text-sm text-muted-foreground line-through">
+            {row.getValue("name")}
+          </span>
+        </div>
+      )
+    },
+  },
 
   {
     accessorKey: "status",
-    header: ({ column }) => (
-      <DataTableColumnHeader
-        column={column}
-        title="Status"
-      />
+    // header: ({ column }) => (
+    //   <DataTableColumnHeader
+    //     column={column}
+    //     title="Status"
+    //   />
+    // ),
+    header: ({ columns }) => (
+      <div className="flex items-center gap-2">
+        <span>状态</span>
+      </div>
     ),
     cell: ({ row }) => {
       const status = row.getValue("status") as StatusValue
@@ -166,7 +183,7 @@ export const columns: ColumnDef<Payment>[] = [
       return (
         <div className="w-full ">
           <Badge variant="outline" className={`bg-${badge.color}-50 text-${badge.color}-700 dark:bg-${badge.color}-950 dark:text-${badge.color}-300`} color={badge.color}>
-            <Icon />
+            <Icon data-icon="inline-start" />
             {badge.text}
           </Badge>
         </div>
@@ -174,30 +191,19 @@ export const columns: ColumnDef<Payment>[] = [
     },
   },
   {
-    accessorKey: "email",
-    header: ({ column }) => {
-      return (<DataTableColumnHeader column={column} title="Email" />
-      )
-    },
-  },
-  {
-    accessorKey: "amount",
-    header: () => <div className="text-right">Amount</div>,
-    cell: ({ row }) => {
-      const amount = Number.parseFloat(row.getValue("amount"))
-      const formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-      }).format(amount)
-
-      return <div className="text-right font-medium">{formatted}</div>
-    },
-  },
-  {
     id: "actions",
     cell: ({ row }) => {
-      const payment = row.original
+      const fileEntry = row.original
 
+      const openInExplorer = async (path: string) => {
+        try {
+          const res = await openPath(path)
+          console.log("Open in explorer result:", res)
+        }
+        catch (error) {
+          console.error("Error opening file dialog:", error)
+        }
+      }
       return (
         <div className="w-full text-center">
           <DropdownMenu>
@@ -210,13 +216,22 @@ export const columns: ColumnDef<Payment>[] = [
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(payment.id)}
+                onClick={() => navigator.clipboard.writeText(fileEntry.full)}
               >
-                Copy payment ID
+                复制文件路径
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => openInExplorer(fileEntry.full)}
+              >
+                打开文件
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => openInExplorer(fileEntry.parent)}
+              >
+                打开文件位置
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>View customer</DropdownMenuItem>
-              <DropdownMenuItem>View payment details</DropdownMenuItem>
+              <DropdownMenuItem>View file details</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
