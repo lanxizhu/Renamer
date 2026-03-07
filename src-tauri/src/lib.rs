@@ -8,6 +8,7 @@ mod window;
 mod window_state;
 
 use std::sync::Mutex;
+use tauri::Manager;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -37,6 +38,13 @@ pub fn run() {
             // splash_screen::init(app).unwrap();
             global_shortcut::init(app).unwrap();
             theme::init(app);
+
+            #[cfg(debug_assertions)] // only include this code on debug builds
+            {
+                let handle = app.handle().clone();
+                let window = handle.get_webview_window("main").unwrap();
+                window.open_devtools();
+            }
 
             Ok(())
         })
