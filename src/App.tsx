@@ -4,7 +4,6 @@ import { invoke } from "@tauri-apps/api/core"
 import { open } from "@tauri-apps/plugin-dialog"
 import { copyFile, lstat, readDir, rename } from "@tauri-apps/plugin-fs"
 import { ArrowUpIcon, BadgeCheck, BadgeMinus, BadgeQuestionMark, BadgeX, BookmarkIcon, CheckCircle2Icon, Clock, InfoIcon, Play } from "lucide-react"
-import { Label } from "radix-ui"
 import { Fragment, useState } from "react"
 import { columns } from "@/components/columns"
 import { DataTable } from "@/components/data-table"
@@ -13,6 +12,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
+import { SelectLabel } from "./components/ui/select"
+import { Switch } from "./components/ui/switch"
 import "./App"
 
 async function asyncPool(limit: number, tasks: Promise<void>[]) {
@@ -201,15 +202,47 @@ function App() {
 
   const [loading, setLoading] = useState(false)
 
+  const updateFileStatus = (fileId: string, status: StatusValue) => {
+    setFiles((prevFiles) => {
+      return prevFiles.map(file =>
+        file.id === fileId ? { ...file, status } : file,
+      )
+    })
+  }
+
   const renameFile = async (file: FileEntry) => {
-    if (file.match) {
-      const res = await rename(file.full, `${file.parent}/${file.target}`)
+    if (!file.match || file.status !== "not started") {
+      return
+    }
+
+    try {
+      // 开始处理
+      updateFileStatus(file.id, "processing")
+
+      // 执行重命名
+      await rename(file.full, `${file.parent}/${file.target}`)
+
+      // 成功
+      updateFileStatus(file.id, "success")
+    }
+    catch (error) {
+      // 失败
+      console.error(`重命名失败: ${file.full}`, error)
+      updateFileStatus(file.id, "failed")
     }
   }
 
   const handleRename = async () => {
     setLoading(true)
 
+    // 将所有匹配的文件状态设置为 pending
+    setFiles((prevFiles) => {
+      return prevFiles.map(file =>
+        file.match ? { ...file, status: "pending" as StatusValue } : file,
+      )
+    })
+
+    // 逐个处理文件
     await asyncPool(1, files.map(file => renameFile(file)))
 
     setLoading(false)

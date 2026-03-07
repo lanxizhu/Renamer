@@ -26,6 +26,7 @@ interface StatusConfig {
   icon: ComponentType<SVGProps<SVGSVGElement>>
   text: string
   color: string
+  className: string
 }
 
 const STATUS_CONFIG: Record<StatusValue, StatusConfig> = {
@@ -33,31 +34,37 @@ const STATUS_CONFIG: Record<StatusValue, StatusConfig> = {
     icon: BadgeCheck,
     text: "成功",
     color: "green",
+    className: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300",
   },
   "processing": {
     icon: Spinner,
     text: "进行中",
     color: "blue",
+    className: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
   },
   "pending": {
     icon: Clock,
     text: "待处理",
     color: "amber",
+    className: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
   },
   "failed": {
     icon: BadgeX,
     text: "失败",
     color: "red",
+    className: "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300",
   },
   "not started": {
     icon: BadgeMinus,
     text: "未开始",
     color: "gray",
+    className: "bg-gray-50 text-gray-700 dark:bg-gray-950 dark:text-gray-300",
   },
   "unknown": {
     icon: BadgeQuestionMark,
     text: "未知",
     color: "slate",
+    className: "bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300",
   },
 }
 
@@ -179,10 +186,9 @@ export const columns: ColumnDef<FileEntry>[] = [
       const badge = STATUS_CONFIG[status]
 
       const Icon = STATUS_CONFIG[status].icon
-
       return (
         <div className="w-full ">
-          <Badge variant="outline" className={`bg-${badge.color}-50 text-${badge.color}-700 dark:bg-${badge.color}-950 dark:text-${badge.color}-300`} color={badge.color}>
+          <Badge variant="outline" className={badge.className} color={badge.color}>
             <Icon data-icon="inline-start" />
             {badge.text}
           </Badge>
