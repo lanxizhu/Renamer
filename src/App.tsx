@@ -4,13 +4,15 @@ import { invoke } from "@tauri-apps/api/core"
 import { open } from "@tauri-apps/plugin-dialog"
 import { copyFile, lstat, readDir, rename } from "@tauri-apps/plugin-fs"
 import { ArrowUpIcon, BadgeCheck, BadgeMinus, BadgeQuestionMark, BadgeX, BookmarkIcon, BrushCleaning, CheckCircle2Icon, Clock, Files, FileSpreadsheet, Folders, InfoIcon, Play } from "lucide-react"
-import { Fragment, useState } from "react"
+import { Fragment, useEffect, useState } from "react"
+import { toast } from "sonner"
 import { columns } from "@/components/columns"
 import { DataTable } from "@/components/data-table"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Toaster } from "@/components/ui/sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { SelectLabel } from "./components/ui/select"
 import { Switch } from "./components/ui/switch"
@@ -44,8 +46,6 @@ const NameRegex = /[^\\/]+$/
 const TargetRegex = /_([\u4E00-\u9FA5]+)_.*\.(\w+)$/
 
 function App() {
-  const [status, setStatus] = useState<{ type: "success" | "error", message: string } | null>(null)
-
   const [files, setFiles] = useState<FileEntry[]>([])
 
   const [fileSetState, setFileSetState] = useState<Set<string>>(() => new Set())
@@ -235,15 +235,32 @@ function App() {
   const handleRename = async () => {
     setLoading(true)
 
-    // 将所有匹配的文件状态设置为 pending
-    setFiles((prevFiles) => {
-      return prevFiles.map(file =>
-        file.match ? { ...file, status: "pending" as StatusValue } : file,
-      )
-    })
+    // 获取匹配的文件列表
+    const filesToProcess = files.filter(f => f.match && f.status === "not started")
 
     // 逐个处理文件
-    await asyncPool(1, files.map(file => renameFile(file)))
+    for (const file of filesToProcess) {
+      await renameFile(file)
+    }
+
+    setFiles((finalFiles) => {
+      const successCount = finalFiles.filter(f => f.match && f.status === "success").length
+      const failedCount = finalFiles.filter(f => f.match && f.status === "failed").length
+
+      if (failedCount > 0) {
+        toast.info(`完成：成功 ${successCount} 个，失败 ${failedCount} 个`, {
+          description: "你可以点击文件名查看它，或者点击右键菜单进行相关操作",
+          position: "top-center",
+        })
+      }
+      else {
+        toast.success(`全部完成：成功重命名 ${successCount} 个文件`, {
+          description: "你可以点击文件名查看它，或者点击右键菜单进行相关操作",
+          position: "top-center",
+        })
+      }
+      return finalFiles
+    })
 
     setLoading(false)
   }
@@ -268,6 +285,8 @@ function App() {
               还支持多选文件和文件夹以及拖动选中呢～记得试试哦～
             </AlertDescription>
           </Alert>
+
+          <Toaster />
 
           <DataTable
             columns={columns}
