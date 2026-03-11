@@ -3,7 +3,7 @@ import type { FileEntry, StatusValue } from "@/components/columns"
 import { invoke } from "@tauri-apps/api/core"
 import { open } from "@tauri-apps/plugin-dialog"
 import { copyFile, lstat, readDir, rename } from "@tauri-apps/plugin-fs"
-import { ArrowUpIcon, BadgeCheck, BadgeMinus, BadgeQuestionMark, BadgeX, BookmarkIcon, CheckCircle2Icon, Clock, InfoIcon, Play } from "lucide-react"
+import { ArrowUpIcon, BadgeCheck, BadgeMinus, BadgeQuestionMark, BadgeX, BookmarkIcon, BrushCleaning, CheckCircle2Icon, Clock, Files, FileSpreadsheet, Folders, InfoIcon, Play } from "lucide-react"
 import { Fragment, useState } from "react"
 import { columns } from "@/components/columns"
 import { DataTable } from "@/components/data-table"
@@ -251,7 +251,7 @@ function App() {
   return (
     <>
       <div className="flex flex-col gap-2" style={{ height: "calc(100vh - 2rem)" }}>
-        <div className="container mx-auto w-full h-full flex-1">
+        <div className="container mx-auto w-full h-full flex-1 transition-[width,max-width] duration-300 ease-in-out">
           <div className="pb-4">
             <h1 className="inline scroll-m-20 text-4xl font-extrabold tracking-tight text-balance mb-2">
               Renamer
@@ -275,8 +275,14 @@ function App() {
             children={(
               <Fragment>
                 <div className="flex gap-2" id="greet-form">
-                  <Button variant="outline" disabled={loading} onClick={() => openFileDialog()}>选择文件</Button>
-                  <Button variant="outline" disabled={loading} onClick={() => openFileDialog(true)}>选择文件夹</Button>
+                  <Button variant="outline" disabled={loading} onClick={() => openFileDialog()}>
+                    <Files className="hidden md:inline" />
+                    选择文件
+                  </Button>
+                  <Button variant="outline" disabled={loading} onClick={() => openFileDialog(true)}>
+                    <Folders className="hidden md:inline" />
+                    选择文件夹
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -285,12 +291,16 @@ function App() {
                     }}
                     disabled={loading}
                   >
+                    <BrushCleaning className="hidden md:inline" />
                     清除选择
                   </Button>
 
                   <Button disabled={loading || !files.length} onClick={() => handleRename()}>
                     {!loading ? (<Play size={16} />) : (<Spinner />)}
-                    开始
+                    开始运行（
+                    {files.filter(file => file.match).length}
+                    {" "}
+                    个文件）
                   </Button>
                 </div>
               </Fragment>
