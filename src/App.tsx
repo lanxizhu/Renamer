@@ -1,10 +1,9 @@
-import type { DirEntry } from "@tauri-apps/plugin-fs"
 import type { FileEntry, StatusValue } from "@/components/columns"
-import { invoke } from "@tauri-apps/api/core"
+import { getCurrentWindow } from "@tauri-apps/api/window"
 import { open } from "@tauri-apps/plugin-dialog"
 import { copyFile, lstat, readDir, rename } from "@tauri-apps/plugin-fs"
 import { ArrowUpIcon, BadgeCheck, BadgeMinus, BadgeQuestionMark, BadgeX, BookmarkIcon, BrushCleaning, CheckCircle2Icon, Clock, Files, FileSpreadsheet, Folders, InfoIcon, Play } from "lucide-react"
-import { Fragment, useEffect, useState } from "react"
+import { Fragment, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { columns } from "@/components/columns"
 import { DataTable } from "@/components/data-table"
@@ -49,6 +48,12 @@ function App() {
   const [files, setFiles] = useState<FileEntry[]>([])
 
   const [fileSetState, setFileSetState] = useState<Set<string>>(() => new Set())
+  const fileSetRef = useRef<Set<string>>(new Set())
+  const [dragActive, setDragActive] = useState(false)
+  const [, setDragDepth] = useState(0)
+  const [dragItemCount, setDragItemCount] = useState(0)
+  const handleDroppedPathsRef = useRef<(paths: string[]) => Promise<void>>(async () => {})
+  const lastDropRef = useRef<{ key: string, at: number } | null>(null)
 
   const readTreeDir = async (path: string, isTree?: boolean): Promise<FileEntry[]> => {
     const entries: FileEntry[] = []
@@ -139,6 +144,10 @@ function App() {
       const target = targetMatch ? `${targetMatch[1]}.${targetMatch[2]}` : name ? name[0] : ""
       const match = !!targetMatch
 
+      if (fileSetRef.current.has(path)) {
+        return
+      }
+
       setFiles((prevFiles) => {
         setFileSetState((prevSet) => {
           const newSet = new Set(prevSet)
@@ -170,6 +179,82 @@ function App() {
       console.error("Error reading file entry:", error)
     }
   }
+
+  const handleDroppedPaths = async (paths: string[]) => {
+    for (const path of paths) {
+      if (fileSetRef.current.has(path)) {
+        continue
+      }
+      try {
+        const entry = await lstat(path)
+        if (entry.isDirectory) {
+          await handleDir(path)
+        }
+        else {
+          await handleFile(path)
+        }
+      }
+      catch (error) {
+        console.error("Error reading dropped path:", path, error)
+      }
+    }
+  }
+
+  useEffect(() => {
+    handleDroppedPathsRef.current = handleDroppedPaths
+  })
+
+  useEffect(() => {
+    let unlisten: null | (() => void) = null
+
+    const setup = async () => {
+      unlisten = await getCurrentWindow().onDragDropEvent(async (event) => {
+        const payload = event.payload
+
+        if (payload.type === "enter") {
+          setDragDepth(prev => prev + 1)
+          setDragActive(true)
+          setDragItemCount(payload.paths.length)
+        }
+        else if (payload.type === "over") {
+          setDragActive(true)
+        }
+        else if (payload.type === "leave") {
+          setDragDepth((prev) => {
+            const next = Math.max(0, prev - 1)
+            if (next === 0) {
+              setDragActive(false)
+            }
+            return next
+          })
+          setDragItemCount(0)
+        }
+        else if (payload.type === "drop") {
+          const key = payload.paths.slice().sort().join("|")
+          const now = Date.now()
+          if (lastDropRef.current && lastDropRef.current.key === key && now - lastDropRef.current.at < 800) {
+            return
+          }
+          lastDropRef.current = { key, at: now }
+          setDragDepth(0)
+          setDragActive(false)
+          setDragItemCount(0)
+          fileSetRef.current = new Set()
+          if (payload.paths.length) {
+            await handleDroppedPathsRef.current(payload.paths)
+          }
+        }
+      })
+    }
+
+    setup()
+
+    return () => {
+      if (unlisten) {
+        unlisten()
+      }
+    }
+  }, [])
 
   async function openFileDialog(directory = false) {
     try {
@@ -267,6 +352,16 @@ function App() {
 
   return (
     <>
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center pointer-events-none transition-all duration-200 ease-out ${dragActive ? "opacity-100 scale-100" : "opacity-0 scale-[0.98]"}`}
+        aria-hidden={!dragActive}
+      >
+        <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
+        <div className="relative flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary/60 bg-card/80 px-8 py-10 shadow-lg">
+          <div className="text-2xl font-bold tracking-tight">拖入此处</div>
+          <div className="text-sm text-muted-foreground">支持文件或文件夹</div>
+        </div>
+      </div>
       <div className="flex flex-col gap-2" style={{ height: "calc(100vh - 2rem)" }}>
         <div className="container mx-auto w-full h-full flex-1 transition-[width,max-width] duration-300 ease-in-out">
           <div className="pb-4">
@@ -307,6 +402,7 @@ function App() {
                     onClick={() => {
                       setFiles([])
                       setFileSetState(new Set())
+                      fileSetRef.current = new Set()
                     }}
                     disabled={loading}
                   >
