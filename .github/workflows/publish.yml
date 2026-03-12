@@ -1,10 +1,12 @@
-name: 'publish'
+name: 'Publish Release'
 
 on:
   workflow_dispatch:
   push:
     branches:
       - release
+    tags:
+      - 'v*'
 
 jobs:
   publish-tauri:
@@ -53,13 +55,21 @@ jobs:
         # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
         run: pnpm i # change this to npm or pnpm depending on which one you use.
 
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          NOTES=$(git log -10 --pretty=format:"- %s (%h)" | head -c 4096)
+          echo "NOTES<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
-          releaseName: 'App v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: true
+          tagName: v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
+          releaseName: 'v__VERSION__'
+          releaseBody: ${{ steps.release_notes.outputs.NOTES }}
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
