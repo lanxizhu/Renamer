@@ -140,6 +140,8 @@ export const columns: ColumnDef<FileEntry>[] = [
     header: "文件名称",
     cell: ({ row }) => {
       const match = row.original?.match
+
+      const parent = row.original.parent
       return (
         <div className="flex flex-col">
           <span className="text-sm">
@@ -148,6 +150,10 @@ export const columns: ColumnDef<FileEntry>[] = [
 
           <span className={`text-sm ${match ? "text-muted-foreground line-through" : ""}`}>
             {row.getValue("name")}
+          </span>
+
+          <span className="text-xs text-muted-foreground truncate" title={parent}>
+            {parent}
           </span>
         </div>
       )
@@ -176,7 +182,7 @@ export const columns: ColumnDef<FileEntry>[] = [
     //     title="Status"
     //   />
     // ),
-    header: ({ columns }) => (
+    header: ({ columns: _columns }) => (
       <div className="flex items-center gap-2">
         <span>状态</span>
       </div>
