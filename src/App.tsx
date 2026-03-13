@@ -15,6 +15,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { SelectLabel } from "./components/ui/select"
 import { Switch } from "./components/ui/switch"
+import { matchInfo, matchPath, resetFileCount } from "./utils"
 import "./App"
 import "./App.css"
 
@@ -41,10 +42,6 @@ async function asyncPool(limit: number, tasks: Promise<void>[]) {
   return Promise.all(results)
 }
 
-const NameRegex = /[^\\/]+$/
-
-const TargetRegex = /_([\u4E00-\u9FA5]+)_.*\.(\w+)$/
-
 function App() {
   const [files, setFiles] = useState<FileEntry[]>([])
 
@@ -64,9 +61,7 @@ function App() {
     for (const entry of dirEntires) {
       const id = crypto.randomUUID()
 
-      const targetMatch = entry.name.match(TargetRegex)
-      const target = targetMatch ? `${targetMatch[1]}.${targetMatch[2]}` : entry.name
-      const match = !!targetMatch
+      const { match, target } = matchPath(entry.name, path)
 
       if (entry.isDirectory) {
         const children = await readTreeDir(`${path}/${entry.name}`, true)
@@ -138,16 +133,12 @@ function App() {
     try {
       const entry = await lstat(path)
 
-      const name = path.match(NameRegex)
-      const parent = path.replace(/[\\/][^\\/]+$/, "")
-
-      const targetMatch = path.match(TargetRegex)
-      const target = targetMatch ? `${targetMatch[1]}.${targetMatch[2]}` : name ? name[0] : ""
-      const match = !!targetMatch
-
       if (fileSetRef.current.has(path)) {
         return
       }
+
+      const { name, parent } = matchInfo(path)
+      const { match, target } = matchPath(path, parent)
 
       setFiles((prevFiles) => {
         setFileSetState((prevSet) => {
@@ -164,7 +155,7 @@ function App() {
 
         return [...prevFiles, {
           id: crypto.randomUUID(),
-          name: name ? name[0] : "",
+          name,
           status: "not started",
           full: path,
           parent,
@@ -265,13 +256,11 @@ function App() {
       })
 
       if (Array.isArray(selected)) {
-        // console.log("Selected files:", selected)
         if (!directory) {
-          asyncPool(1, selected.map(path => handleFile(path)))
+          await asyncPool(1, selected.map(path => handleFile(path)))
         }
         else {
-          // const tasks = selected.map(path => handleDir(path))
-          asyncPool(1, selected.map(path => handleDir(path)))
+          await asyncPool(1, selected.map(path => handleDir(path)))
         }
       }
       else if (selected) {
@@ -433,6 +422,7 @@ function App() {
                       setFiles([])
                       setFileSetState(new Set())
                       fileSetRef.current = new Set()
+                      resetFileCount()
                     }}
                     disabled={loading}
                   >
