@@ -15,7 +15,9 @@ import { Toaster } from "@/components/ui/sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { SelectLabel } from "./components/ui/select"
 import { Switch } from "./components/ui/switch"
+import { matchInfo, matchPath, resetFileCount } from "./utils"
 import "./App"
+import "./App.css"
 
 async function asyncPool(limit: number, tasks: Promise<void>[]) {
   const results = [] // 存储所有任务的结果
@@ -40,10 +42,6 @@ async function asyncPool(limit: number, tasks: Promise<void>[]) {
   return Promise.all(results)
 }
 
-const NameRegex = /[^\\/]+$/
-
-const TargetRegex = /_([\u4E00-\u9FA5]+)_.*\.(\w+)$/
-
 function App() {
   const [files, setFiles] = useState<FileEntry[]>([])
 
@@ -63,9 +61,7 @@ function App() {
     for (const entry of dirEntires) {
       const id = crypto.randomUUID()
 
-      const targetMatch = entry.name.match(TargetRegex)
-      const target = targetMatch ? `${targetMatch[1]}.${targetMatch[2]}` : entry.name
-      const match = !!targetMatch
+      const { match, target } = matchPath(entry.name, path)
 
       if (entry.isDirectory) {
         const children = await readTreeDir(`${path}/${entry.name}`, true)
@@ -137,16 +133,12 @@ function App() {
     try {
       const entry = await lstat(path)
 
-      const name = path.match(NameRegex)
-      const parent = path.replace(/[\\/][^\\/]+$/, "")
-
-      const targetMatch = path.match(TargetRegex)
-      const target = targetMatch ? `${targetMatch[1]}.${targetMatch[2]}` : name ? name[0] : ""
-      const match = !!targetMatch
-
       if (fileSetRef.current.has(path)) {
         return
       }
+
+      const { name, parent } = matchInfo(path)
+      const { match, target } = matchPath(path, parent)
 
       setFiles((prevFiles) => {
         setFileSetState((prevSet) => {
@@ -163,7 +155,7 @@ function App() {
 
         return [...prevFiles, {
           id: crypto.randomUUID(),
-          name: name ? name[0] : "",
+          name,
           status: "not started",
           full: path,
           parent,
@@ -264,13 +256,11 @@ function App() {
       })
 
       if (Array.isArray(selected)) {
-        // console.log("Selected files:", selected)
         if (!directory) {
-          asyncPool(1, selected.map(path => handleFile(path)))
+          await asyncPool(1, selected.map(path => handleFile(path)))
         }
         else {
-          // const tasks = selected.map(path => handleDir(path))
-          asyncPool(1, selected.map(path => handleDir(path)))
+          await asyncPool(1, selected.map(path => handleDir(path)))
         }
       }
       else if (selected) {
@@ -357,9 +347,38 @@ function App() {
         aria-hidden={!dragActive}
       >
         <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
-        <div className="relative flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary/60 bg-card/80 px-8 py-10 shadow-lg">
-          <div className="text-2xl font-bold tracking-tight">拖入此处</div>
-          <div className="text-sm text-muted-foreground">支持文件或文件夹</div>
+        <div className="drag-overlay-border">
+          <svg className="drag-border-svg" fill="none">
+            <defs>
+              <linearGradient id="drag-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ff6b6b" />
+                <stop offset="17%" stopColor="#ffa94d" />
+                <stop offset="33%" stopColor="#ffd43b" />
+                <stop offset="50%" stopColor="#69db7c" />
+                <stop offset="67%" stopColor="#66d9e8" />
+                <stop offset="83%" stopColor="#748ffc" />
+                <stop offset="100%" stopColor="#cc5de8" />
+              </linearGradient>
+            </defs>
+            <rect
+              className="drag-border-rect"
+              stroke="url(#drag-grad)"
+              strokeWidth="3"
+              fill="none"
+              style={{
+                x: "1.5px",
+                y: "1.5px",
+                width: "calc(100% - 3px)",
+                height: "calc(100% - 3px)",
+                rx: "16px",
+                ry: "16px",
+              } as React.CSSProperties}
+            />
+          </svg>
+          <div className="relative flex flex-col items-center gap-3 px-10 py-12">
+            <div className="text-2xl font-bold tracking-tight">拖入此处</div>
+            <div className="text-sm text-muted-foreground">支持文件或文件夹</div>
+          </div>
         </div>
       </div>
       <div className="flex flex-col gap-2" style={{ height: "calc(100vh - 2rem)" }}>
@@ -403,6 +422,7 @@ function App() {
                       setFiles([])
                       setFileSetState(new Set())
                       fileSetRef.current = new Set()
+                      resetFileCount()
                     }}
                     disabled={loading}
                   >

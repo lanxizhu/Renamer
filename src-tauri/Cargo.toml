@@ -1,6 +1,6 @@
 [package]
 name = "Renamer"
-version = "0.2.1"
+version = "0.3.0"
 description = "📋 Batch Rename Files"
 authors = [ "you" ]
 edition = "2021"
