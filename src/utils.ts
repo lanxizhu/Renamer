@@ -22,6 +22,7 @@ export function matchInfo(path: string) {
 const fileCountMap = new Map<string, number>()
 
 export function matchPath(path: string, parent?: string) {
+  const effectiveParent = parent ?? path.replace(ParentRegex, "")
   const targetMatch = path.match(TargetRegex)
 
   // If the path does not match the target pattern, return the original file name
@@ -34,7 +35,7 @@ export function matchPath(path: string, parent?: string) {
 
   let target = `${fileName}.${fileExt}`
 
-  const full = `${parent}/${target}`
+  const full = `${effectiveParent}/${target}`
 
   if (fileCountMap.has(full)) {
     fileCountMap.set(full, fileCountMap.get(full)! + 1)
